@@ -27,6 +27,7 @@ const state = {
   wakeLock: null,
   activePanel: "uploadPanel",
   panelCollapsed: false,
+  panelVisible: false,
   toastTimer: null,
   toastHideTimer: null,
   traceMode: false,
@@ -581,14 +582,16 @@ function syncControls() {
   elements.backgroundReduceButton.setAttribute("aria-pressed", String(state.reduceBackground));
   elements.backgroundReduceButton.classList.toggle("is-active", state.reduceBackground);
 
+  elements.controlPanel.classList.toggle("is-hidden", !state.panelVisible);
   elements.controlPanel.classList.toggle("is-collapsed", state.panelCollapsed);
-  elements.panelToggleButton.setAttribute("aria-expanded", String(!state.panelCollapsed));
-  elements.panelToggleButton.textContent = state.panelCollapsed ? "Show" : "Hide";
+  elements.panelToggleButton.setAttribute("aria-expanded", String(state.panelVisible));
+  elements.panelToggleButton.textContent = state.panelVisible ? "Hide" : "Show";
 }
 
 function setActivePanel(panelId, openPicker = false) {
   state.activePanel = panelId;
   state.panelCollapsed = false;
+  state.panelVisible = true;
 
   elements.toolButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.panel === panelId);
@@ -612,7 +615,8 @@ function setActivePanel(panelId, openPicker = false) {
 }
 
 function togglePanelCollapsed() {
-  state.panelCollapsed = !state.panelCollapsed;
+  state.panelVisible = !state.panelVisible;
+  state.panelCollapsed = false;
   syncControls();
 }
 
@@ -857,6 +861,7 @@ async function resetApp() {
   state.traceMode = false;
   state.reduceBackground = false;
   state.panelCollapsed = false;
+  state.panelVisible = false;
 
   elements.imageInput.value = "";
   const overlayContext = elements.overlayCanvas.getContext("2d");

@@ -212,7 +212,6 @@ button {
 }
 
 .control-panel {
-  display: none;
   left: 12px;
   right: 12px;
   bottom: calc(var(--toolbar-height) + var(--safe-bottom) + 10px);
@@ -229,6 +228,12 @@ button {
     padding 220ms ease,
     background-color 220ms ease,
     border-color 220ms ease;
+}
+
+.control-panel.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(18px);
 }
 
 .control-panel.is-collapsed {
@@ -457,6 +462,10 @@ input[type="range"] {
     right: auto;
     width: min(560px, calc(100vw - 24px));
     transform: translateX(-50%);
+  }
+
+  .control-panel.is-hidden {
+    transform: translateX(-50%) translateY(18px);
   }
 
   .bottom-toolbar {
