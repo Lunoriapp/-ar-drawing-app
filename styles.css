@@ -212,6 +212,7 @@ button {
 }
 
 .control-panel {
+  display: none;
   left: 12px;
   right: 12px;
   bottom: calc(var(--toolbar-height) + var(--safe-bottom) + 10px);
