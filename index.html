@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1020" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>TraceFlow AR</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="top-bar">
+        <div>
+          <p class="eyebrow">AR tracing</p>
+          <h1>TraceFlow</h1>
+        </div>
+        <button id="resetButton" class="ghost-button" type="button">Reset</button>
+      </header>
+
+      <main class="camera-stage">
+        <video id="cameraFeed" autoplay playsinline muted aria-label="Live rear camera feed"></video>
+
+        <div id="cameraFallback" class="center-card hidden" role="status" aria-live="polite">
+          <h2>Camera access needed</h2>
+          <p id="cameraMessage">
+            Allow camera access to trace over paper with your uploaded image.
+          </p>
+          <button id="retryCameraButton" class="primary-button" type="button">Enable Camera</button>
+        </div>
+
+        <div id="overlayStage" class="overlay-stage">
+          <div
+            id="overlayWrapper"
+            class="overlay-wrapper hidden"
+            aria-label="Tracing overlay"
+          >
+            <canvas id="overlayCanvas" aria-label="Processed tracing overlay"></canvas>
+          </div>
+        </div>
+
+        <div id="toast" class="toast hidden" aria-live="polite" aria-atomic="true">
+          <span id="statusText">Starting camera…</span>
+        </div>
+      </main>
+
+      <section id="controlPanel" class="control-panel" aria-live="polite">
+        <div class="control-panel-header">
+          <div class="control-copy">
+            <h2 id="panelTitle">Upload an image to begin</h2>
+            <span id="panelMeta">Move and resize your overlay on top of the paper.</span>
+          </div>
+          <button
+            id="panelToggleButton"
+            class="panel-toggle"
+            type="button"
+            aria-expanded="true"
+            aria-controls="panelBody"
+          >
+            Hide
+          </button>
+        </div>
+
+        <div id="panelBody" class="panel-body">
+          <div id="uploadPanel" class="panel-content is-active">
+            <label for="imageInput" class="upload-dropzone">
+              <span>Choose a reference image</span>
+              <small>Photos and PNGs work best for tracing.</small>
+            </label>
+          </div>
+
+          <div id="opacityPanel" class="panel-content">
+            <label class="range-label" for="opacityRange">
+              Overlay opacity
+              <output id="opacityValue" for="opacityRange">22%</output>
+            </label>
+            <input id="opacityRange" type="range" min="5" max="100" step="1" value="22" />
+          </div>
+
+          <div id="tracePanel" class="panel-content">
+            <div class="toggle-stack">
+              <button
+                id="traceModeButton"
+                class="mode-toggle is-active"
+                type="button"
+                aria-pressed="true"
+              >
+                <span>Trace Mode</span>
+                <small>Line-art view for faint, pencil-friendly tracing.</small>
+              </button>
+              <button
+                id="backgroundReduceButton"
+                class="mode-toggle"
+                type="button"
+                aria-pressed="false"
+              >
+                <span>Reduce White Background</span>
+                <small>Softens solid white image backgrounds when needed.</small>
+              </button>
+            </div>
+          </div>
+
+          <div id="scalePanel" class="panel-content">
+            <label class="range-label" for="scaleRange">
+              Overlay scale
+              <output id="scaleValue" for="scaleRange">100%</output>
+            </label>
+            <input id="scaleRange" type="range" min="20" max="250" step="1" value="100" />
+          </div>
+
+          <div id="rotatePanel" class="panel-content">
+            <label class="range-label" for="rotateRange">
+              Overlay rotation
+              <output id="rotateValue" for="rotateRange">0°</output>
+            </label>
+            <input id="rotateRange" type="range" min="-180" max="180" step="1" value="0" />
+          </div>
+        </div>
+      </section>
+
+      <nav class="bottom-toolbar" aria-label="Tracing controls">
+        <button class="tool-button is-active" type="button" data-panel="uploadPanel">
+          <span>Upload</span>
+        </button>
+        <button class="tool-button" type="button" data-panel="opacityPanel">
+          <span>Opacity</span>
+        </button>
+        <button class="tool-button" type="button" data-panel="tracePanel">
+          <span>Trace</span>
+        </button>
+        <button class="tool-button" type="button" data-panel="scalePanel">
+          <span>Scale</span>
+        </button>
+        <button class="tool-button" type="button" data-panel="rotatePanel">
+          <span>Rotate</span>
+        </button>
+        <button id="lockButton" class="tool-button" type="button" aria-pressed="false">
+          <span>Lock</span>
+        </button>
+        <button id="mirrorButton" class="tool-button" type="button" aria-pressed="false">
+          <span>Mirror</span>
+        </button>
+        <button id="torchButton" class="tool-button" type="button" aria-pressed="false" disabled>
+          <span>Flashlight</span>
+        </button>
+      </nav>
+
+      <input id="imageInput" type="file" accept="image/*" hidden />
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
