@@ -8,6 +8,17 @@ const TRACE_EDGE_THRESHOLD = 48;
 const BACKGROUND_BRIGHTNESS_THRESHOLD = 236;
 const BACKGROUND_COLOR_TOLERANCE = 18;
 const PROCESSING_MAX_DIMENSION = 1600;
+const CUP_STAND_DEFAULT_OFFSET = -45;
+const CUP_STAND_FIRST_ENABLE_OFFSET = -60;
+const MIN_DRAWING_OFFSET = -80;
+const MAX_DRAWING_OFFSET = 40;
+const DRAWING_OFFSET_NUDGE_STEP = 5;
+const MIN_VISIBLE_OVERLAY_RATIO = 0.18;
+const MIN_VISIBLE_OVERLAY_PX = 72;
+const STORAGE_KEYS = {
+  cupStandMode: "cupStandMode",
+  drawingOffsetY: "drawingOffsetY",
+};
 
 const state = {
   stream: null,
@@ -32,6 +43,9 @@ const state = {
   toastHideTimer: null,
   traceMode: false,
   reduceBackground: false,
+  cupStandMode: false,
+  drawingOffsetY: 0,
+  hasStoredDrawingOffset: false,
 };
 
 const elements = {
@@ -61,6 +75,12 @@ const elements = {
   torchButton: document.getElementById("torchButton"),
   traceModeButton: document.getElementById("traceModeButton"),
   backgroundReduceButton: document.getElementById("backgroundReduceButton"),
+  cupStandModeButton: document.getElementById("cupStandModeButton"),
+  drawingOffsetRange: document.getElementById("drawingOffsetRange"),
+  drawingOffsetValue: document.getElementById("drawingOffsetValue"),
+  nudgeUpButton: document.getElementById("nudgeUpButton"),
+  safeDrawingGuide: document.getElementById("safeDrawingGuide"),
+  drawingPositionButtons: [...document.querySelectorAll(".position-preset")],
   toolButtons: [...document.querySelectorAll(".tool-button[data-panel]")],
   panelContents: [...document.querySelectorAll(".panel-content")],
 };
@@ -104,6 +124,7 @@ const gestureState = {
 };
 
 async function init() {
+  hydratePersistentSettings();
   bindEvents();
   syncControls();
   updateOverlayTransform();
@@ -150,6 +171,34 @@ function bindEvents() {
     showToast(
       state.reduceBackground ? "White background reduction enabled." : "White background reduction disabled."
     );
+  });
+
+  elements.cupStandModeButton.addEventListener("click", () => {
+    state.cupStandMode = !state.cupStandMode;
+    if (state.cupStandMode) {
+      const targetOffset = !state.hasStoredDrawingOffset
+        ? CUP_STAND_FIRST_ENABLE_OFFSET
+        : CUP_STAND_DEFAULT_OFFSET;
+      setDrawingOffset(targetOffset);
+    } else {
+      setDrawingOffset(0);
+    }
+    showToast(state.cupStandMode ? "Cup Stand Mode enabled." : "Cup Stand Mode disabled.");
+  });
+
+  elements.drawingOffsetRange.addEventListener("input", (event) => {
+    setDrawingOffset(Number(event.target.value));
+  });
+
+  elements.drawingPositionButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setDrawingOffset(Number(button.dataset.offset));
+    });
+  });
+
+  elements.nudgeUpButton.addEventListener("click", () => {
+    setDrawingOffset(state.drawingOffsetY - DRAWING_OFFSET_NUDGE_STEP);
+    showToast("Guide moved higher.", { duration: 1100 });
   });
 
   elements.toolButtons.forEach((button) => {
@@ -549,9 +598,16 @@ function getProcessingSize(width, height) {
 }
 
 function updateOverlayTransform() {
+  const drawingOffsetYInPixels = getDrawingOffsetYInPixels();
+  let translatedY = state.y + drawingOffsetYInPixels;
+  if (state.cupStandMode) {
+    translatedY = clampOverlayTranslateY(translatedY);
+    state.y = translatedY - drawingOffsetYInPixels;
+  }
+
   elements.overlayCanvas.style.opacity = String(state.opacity);
   elements.overlayCanvas.style.filter = state.traceMode ? "blur(0.2px)" : "saturate(0.75) brightness(1.08)";
-  elements.overlayWrapper.style.transform = `translate(calc(-50% + ${state.x}px), calc(-50% + ${state.y}px)) rotate(${state.rotation}deg) scale(${state.scale})`;
+  elements.overlayWrapper.style.transform = `translate(-50%, -50%) translate(${state.x}px, ${translatedY}px) rotate(${state.rotation}deg) scale(${state.scale})`;
   elements.overlayWrapper.classList.toggle("is-locked", state.locked);
 }
 
@@ -582,10 +638,88 @@ function syncControls() {
   elements.backgroundReduceButton.setAttribute("aria-pressed", String(state.reduceBackground));
   elements.backgroundReduceButton.classList.toggle("is-active", state.reduceBackground);
 
+  elements.cupStandModeButton.setAttribute("aria-pressed", String(state.cupStandMode));
+  elements.cupStandModeButton.classList.toggle("is-active", state.cupStandMode);
+
+  elements.drawingOffsetRange.value = String(Math.round(state.drawingOffsetY));
+  elements.drawingOffsetValue.value = `${Math.round(state.drawingOffsetY)}%`;
+  elements.drawingPositionButtons.forEach((button) => {
+    const buttonOffset = Number(button.dataset.offset);
+    const isActive = Math.round(state.drawingOffsetY) === buttonOffset;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+  elements.nudgeUpButton.disabled = Math.round(state.drawingOffsetY) <= MIN_DRAWING_OFFSET;
+
+  elements.safeDrawingGuide.classList.toggle("is-visible", state.cupStandMode);
+
   elements.controlPanel.classList.toggle("is-hidden", !state.panelVisible);
   elements.controlPanel.classList.toggle("is-collapsed", state.panelCollapsed);
   elements.panelToggleButton.setAttribute("aria-expanded", String(state.panelVisible));
   elements.panelToggleButton.textContent = state.panelVisible ? "Hide" : "Show";
+}
+
+function hydratePersistentSettings() {
+  state.cupStandMode = readStoredBoolean(STORAGE_KEYS.cupStandMode, false);
+  state.hasStoredDrawingOffset = hasStoredValue(STORAGE_KEYS.drawingOffsetY);
+  const fallbackOffset = state.cupStandMode ? CUP_STAND_DEFAULT_OFFSET : 0;
+  state.drawingOffsetY = clamp(
+    readStoredNumber(STORAGE_KEYS.drawingOffsetY, fallbackOffset),
+    MIN_DRAWING_OFFSET,
+    MAX_DRAWING_OFFSET
+  );
+}
+
+function persistDrawingPositionSettings() {
+  try {
+    localStorage.setItem(STORAGE_KEYS.cupStandMode, String(state.cupStandMode));
+    localStorage.setItem(STORAGE_KEYS.drawingOffsetY, String(state.drawingOffsetY));
+    state.hasStoredDrawingOffset = true;
+  } catch (error) {
+    console.warn("Unable to persist drawing position settings:", error);
+  }
+}
+
+function setDrawingOffset(nextOffset) {
+  state.drawingOffsetY = clamp(Number(nextOffset), MIN_DRAWING_OFFSET, MAX_DRAWING_OFFSET);
+  persistDrawingPositionSettings();
+  updateOverlayTransform();
+  syncControls();
+}
+
+function hasStoredValue(key) {
+  try {
+    return localStorage.getItem(key) !== null;
+  } catch (error) {
+    return false;
+  }
+}
+
+function readStoredBoolean(key, fallback) {
+  try {
+    const rawValue = localStorage.getItem(key);
+    if (rawValue === null) {
+      return fallback;
+    }
+
+    return rawValue === "true";
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function readStoredNumber(key, fallback) {
+  try {
+    const rawValue = localStorage.getItem(key);
+    if (rawValue === null) {
+      return fallback;
+    }
+
+    const numericValue = Number(rawValue);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  } catch (error) {
+    return fallback;
+  }
 }
 
 function setActivePanel(panelId, openPicker = false) {
@@ -779,6 +913,50 @@ function getMidpoint(firstPoint, secondPoint) {
   return {
     x: (firstPoint.x + secondPoint.x) / 2,
     y: (firstPoint.y + secondPoint.y) / 2,
+  };
+}
+
+function getDrawingOffsetYInPixels() {
+  const stageHeight = elements.overlayStage.clientHeight;
+  if (!stageHeight) {
+    return 0;
+  }
+
+  return (clamp(state.drawingOffsetY, MIN_DRAWING_OFFSET, MAX_DRAWING_OFFSET) / 100) * stageHeight;
+}
+
+function clampOverlayTranslateY(translateY) {
+  const stageHeight = elements.overlayStage.clientHeight;
+  const overlayBounds = getOverlayBounds();
+  if (!stageHeight || !overlayBounds) {
+    return translateY;
+  }
+
+  const minVisible = Math.min(
+    overlayBounds.height,
+    Math.max(MIN_VISIBLE_OVERLAY_PX, stageHeight * MIN_VISIBLE_OVERLAY_RATIO)
+  );
+  const centerY = stageHeight / 2 + translateY;
+  const minCenterY = minVisible - overlayBounds.height / 2;
+  const maxCenterY = stageHeight - minVisible + overlayBounds.height / 2;
+  return clamp(centerY, minCenterY, maxCenterY) - stageHeight / 2;
+}
+
+function getOverlayBounds() {
+  const canvasRect = elements.overlayCanvas.getBoundingClientRect();
+  if (!canvasRect.width || !canvasRect.height) {
+    return null;
+  }
+
+  const scaledWidth = canvasRect.width * state.scale;
+  const scaledHeight = canvasRect.height * state.scale;
+  const radians = (Math.abs(state.rotation) * Math.PI) / 180;
+  const cosine = Math.abs(Math.cos(radians));
+  const sine = Math.abs(Math.sin(radians));
+
+  return {
+    width: scaledWidth * cosine + scaledHeight * sine,
+    height: scaledWidth * sine + scaledHeight * cosine,
   };
 }
 

@@ -97,6 +97,27 @@ button {
   touch-action: none;
 }
 
+.safe-drawing-guide {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.safe-drawing-guide::before {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 18%;
+  border-top: 1px dashed rgba(255, 255, 255, 0.3);
+}
+
+.safe-drawing-guide.is-visible {
+  opacity: 0.62;
+}
+
 .overlay-wrapper {
   position: absolute;
   inset: 50% auto auto 50%;
@@ -281,7 +302,8 @@ button {
 .panel-body {
   display: grid;
   margin-top: 12px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   max-height: 170px;
   opacity: 1;
   transition:
@@ -332,6 +354,54 @@ button {
 .toggle-stack {
   display: grid;
   gap: 10px;
+}
+
+.drawing-position-control {
+  margin-top: 12px;
+}
+
+.position-presets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.position-preset,
+.nudge-up-button {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.position-preset.is-active,
+.position-preset[aria-pressed="true"] {
+  border-color: rgba(103, 232, 249, 0.44);
+  background: rgba(103, 232, 249, 0.18);
+}
+
+.nudge-up-button {
+  margin-top: 8px;
+  width: 100%;
+  text-align: center;
+}
+
+.nudge-up-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.range-helper {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .mode-toggle {

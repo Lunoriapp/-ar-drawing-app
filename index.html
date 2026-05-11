@@ -37,6 +37,7 @@
         </div>
 
         <div id="overlayStage" class="overlay-stage">
+          <div id="safeDrawingGuide" class="safe-drawing-guide" aria-hidden="true"></div>
           <div
             id="overlayWrapper"
             class="overlay-wrapper hidden"
@@ -104,6 +105,29 @@
                 <span>Reduce White Background</span>
                 <small>Softens solid white image backgrounds when needed.</small>
               </button>
+              <button
+                id="cupStandModeButton"
+                class="mode-toggle"
+                type="button"
+                aria-pressed="false"
+              >
+                <span>Cup Stand Mode</span>
+                <small>Lifts the guide upward when your phone leans on a cup or stand.</small>
+              </button>
+            </div>
+            <div class="drawing-position-control">
+              <label class="range-label" for="drawingOffsetRange">
+                Drawing Position
+                <output id="drawingOffsetValue" for="drawingOffsetRange">0%</output>
+              </label>
+              <input id="drawingOffsetRange" type="range" min="-80" max="40" step="1" value="0" />
+              <div class="position-presets" role="group" aria-label="Quick drawing positions">
+                <button class="position-preset" type="button" data-offset="-60">Top</button>
+                <button class="position-preset" type="button" data-offset="0">Middle</button>
+                <button class="position-preset" type="button" data-offset="30">Bottom</button>
+              </div>
+              <button id="nudgeUpButton" class="nudge-up-button" type="button">Move guide higher</button>
+              <small class="range-helper">Move the guide up or down to fit your paper.</small>
             </div>
           </div>
 
